@@ -1,0 +1,21 @@
+{
+  "name": "7702-examples",
+  "version": "1.0.0",
+  "description": "contains sample code snippets for different 7702 account implementations.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@etherspot/free-bundler": "^1.0.1",
+    "@zerodev/sdk": "^5.5.3",
+    "dotenv": "^17.2.3",
+    "tslib": "^2.6.2",
+    "tsx": "^4.20.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.0"
+  }
+}
