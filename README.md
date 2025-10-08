@@ -8,5 +8,5 @@ npm i
 
 ### send userop using [Kernel's 7702 implementation](https://github.com/zerodevapp/kernel/blob/dev/src/Kernel.sol)
 ```
-npx tsx src/accounts/kernel.ts
+npx tsx src/accounts/kernel/send.ts
 ```
