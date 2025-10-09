@@ -2,7 +2,7 @@ import { createKernelAccount } from "@zerodev/sdk";
 import { KERNEL_V3_3, KernelVersionToAddressesMap } from "@zerodev/sdk/constants";
 import { privateKeyToAccount } from "viem/accounts"
 import dotenv from "dotenv";
-import { createPublicClient, Hex, http, parseUnits, publicActions, walletActions } from "viem";
+import { createPublicClient, Hex, http, parseUnits, publicActions, SignAuthorizationReturnType, walletActions } from "viem";
 import { createFreeBundler } from "@etherspot/free-bundler";
 import { sepolia } from "viem/chains";
 import { entryPoint07Address } from "viem/account-abstraction";
@@ -32,10 +32,18 @@ const main = async () => {
         bundlerUrl
     }).extend(publicActions).extend(walletActions);
 
-    const authorization = await bundlerClient.signAuthorization({
-        account: owner,
-        contractAddress: KernelVersionToAddressesMap[KERNEL_V3_3].accountImplementationAddress,
+    const senderCode = await bundlerClient.getCode({
+        address: owner.address
     });
+
+    const delegateAddress = KernelVersionToAddressesMap[KERNEL_V3_3].accountImplementationAddress;
+    let authorization: SignAuthorizationReturnType | undefined;
+    if(senderCode !== `0xef0100${delegateAddress.toLowerCase().substring(2)}`) {
+        authorization = await bundlerClient.signAuthorization({
+            account: owner,
+            contractAddress: delegateAddress
+        })
+    }
 
     console.log("authorization:: ", authorization);
 
