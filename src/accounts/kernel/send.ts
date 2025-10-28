@@ -2,20 +2,20 @@ import { createKernelAccount } from "@zerodev/sdk";
 import { KERNEL_V3_3, KernelVersionToAddressesMap } from "@zerodev/sdk/constants";
 import { privateKeyToAccount } from "viem/accounts"
 import dotenv from "dotenv";
-import { createPublicClient, Hex, http, parseUnits, publicActions, SignAuthorizationReturnType, walletActions } from "viem";
-import { createFreeBundler } from "@etherspot/free-bundler";
-import { sepolia } from "viem/chains";
+import { Chain, createPublicClient, Hex, http, parseUnits, publicActions, SignAuthorizationReturnType, walletActions } from "viem";
+import { createFreeBundler, getFreeBundlerUrl } from "@etherspot/free-bundler";
+import { optimism, polygon, sepolia } from "viem/chains";
 import { entryPoint07Address } from "viem/account-abstraction";
 dotenv.config();
 
-const main = async () => {
+const main = async (chain: Chain) => {
     const owner = privateKeyToAccount(process.env.PRIVATE_KEY! as Hex);
 
-    const bundlerUrl = process.env.BUNDLER_URL
+    const bundlerUrl = process.env.BUNDLER_URL || getFreeBundlerUrl(chain.id)
 
     const publicClient = createPublicClient({
         transport: http(bundlerUrl),
-        chain: sepolia
+        chain
     });
 
     const kernelAccount = await createKernelAccount(
@@ -28,7 +28,7 @@ const main = async () => {
     );
 
     const bundlerClient = createFreeBundler({
-        chain: sepolia,
+        chain,
         bundlerUrl
     }).extend(publicActions).extend(walletActions);
 
@@ -52,10 +52,10 @@ const main = async () => {
         authorization,
         calls: [{
             to: "0x03b22d7742fA2A8a8f01b64F40F0F2185E965cB8",
-            value: parseUnits('0.0001', 18)
+            value: parseUnits('0.00000001', 18)
         }]
     });
 
     console.log("userop hash:: ", userOpHash);
 }
-main();
+main(polygon);
