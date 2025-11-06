@@ -1,6 +1,22 @@
 import createFreeBundler, { getFreeBundlerUrl } from "@etherspot/free-bundler";
-import { Chain, createPublicClient, decodeFunctionData, encodeFunctionData, Hex, http, parseUnits, publicActions, recoverAddress, recoverTypedDataAddress, SignAuthorizationReturnType, toFunctionSelector, TypedData, TypedDataDefinition, walletActions } from "viem";
-import { entryPoint08Abi, toSmartAccount, toSimple7702SmartAccount, getUserOperationTypedData, toPackedUserOperation, getUserOperationHash } from "viem/account-abstraction";
+import {
+    Chain,
+    decodeFunctionData,
+    encodeFunctionData,
+    Hex,
+    parseUnits,
+    publicActions,
+    SignAuthorizationReturnType,
+    TypedData,
+    TypedDataDefinition,
+    walletActions
+} from "viem";
+import {
+    entryPoint08Abi,
+    toSmartAccount,
+    toPackedUserOperation,
+    getUserOperationHash
+} from "viem/account-abstraction";
 import { privateKeyToAccount } from "viem/accounts";
 import { ambireAccountAbi } from "../../abis/ambire";
 import { sepolia } from "viem/chains";
@@ -21,17 +37,17 @@ const main = async (
 
     const bundlerUrl = process.env.BUNDLER_URL || getFreeBundlerUrl(chain.id);
 
-    const client = createPublicClient({
-        transport: http(bundlerUrl),
-        chain
-    });
+    const bundlerClient = createFreeBundler({
+        chain,
+        bundlerUrl
+    }).extend(publicActions).extend(walletActions);
 
     const ambireAccount = await toSmartAccount({
-        client,
+        client: bundlerClient,
         entryPoint: {
             abi: entryPoint08Abi,
             address: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
-            version: "0.8"
+            version: "0.8" // using 0.8 temporarily, until viem supports 0.9
         },
         async encodeCalls (calls: readonly Call[]) {
             return encodeFunctionData({
@@ -86,7 +102,7 @@ const main = async (
             })
         },
         async signUserOperation(parameters) {
-            const { chainId = client.chain!.id, authorization, ...userOperation } = parameters
+            const { chainId = bundlerClient.chain.id, authorization, ...userOperation } = parameters
             const packedUserOp = toPackedUserOperation({...userOperation, sender: owner.address});
             const useropHash = getUserOperationHash({
                 userOperation: {
@@ -125,10 +141,6 @@ const main = async (
         },
     });
 
-    const bundlerClient = createFreeBundler({
-        chain,
-        bundlerUrl
-    }).extend(publicActions).extend(walletActions);
 
     const senderCode = await bundlerClient.getCode({
         address: owner.address
@@ -162,5 +174,6 @@ const main = async (
     });
 
     console.log("userop hash:: ", userOpHash);
+    return userOpHash;
 }
 main(sepolia);

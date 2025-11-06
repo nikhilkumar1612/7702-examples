@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@etherspot/free-bundler": "^1.0.1",
+    "@etherspot/free-bundler": "^1.0.2",
     "@zerodev/sdk": "^5.5.3",
     "dotenv": "^17.2.3",
     "tslib": "^2.6.2",

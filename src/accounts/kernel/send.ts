@@ -58,4 +58,4 @@ const main = async (chain: Chain) => {
 
     console.log("userop hash:: ", userOpHash);
 }
-main(polygon);
+main(optimism);
