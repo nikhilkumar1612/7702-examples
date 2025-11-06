@@ -1,0 +1,187 @@
+import createFreeBundler, { getFreeBundlerUrl } from "@etherspot/free-bundler";
+import {
+    Chain,
+    decodeFunctionData,
+    encodeAbiParameters,
+    encodeFunctionData,
+    Hex,
+    parseUnits,
+    publicActions,
+    SignAuthorizationReturnType,
+    TypedData,
+    TypedDataDefinition,
+    walletActions
+} from "viem";
+import {
+    entryPoint08Abi,
+    toSmartAccount,
+    getUserOperationTypedData
+} from "viem/account-abstraction";
+import { privateKeyToAccount } from "viem/accounts";
+import { optimism } from "viem/chains";
+import dotenv from "dotenv";
+import { openfortAbi } from "../../abis/openfort";
+dotenv.config();
+
+type Call = {
+    to: Hex
+    data?: Hex | undefined
+    value?: bigint | undefined
+}
+
+const callType = {
+    components: [
+      { name: 'target', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+    ],
+    type: 'tuple',
+};
+
+const params = [{ ...callType, type: 'tuple[]' }];
+
+const main = async (
+    chain: Chain
+) => {
+    const owner = privateKeyToAccount(process.env.PRIVATE_KEY! as Hex);
+
+    const bundlerUrl = process.env.BUNDLER_URL || getFreeBundlerUrl(chain.id);
+
+    const bundlerClient = createFreeBundler({
+        chain,
+        bundlerUrl
+    }).extend(publicActions).extend(walletActions);
+
+    const openfortAccount = await toSmartAccount({
+        client: bundlerClient,
+        entryPoint: {
+            abi: entryPoint08Abi,
+            address: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+            version: "0.8" // using 0.8 temporarily, until viem supports 0.9
+        },
+        async encodeCalls (calls: readonly Call[]) {
+            console.log("calls:: ", calls);
+            return encodeFunctionData({
+                abi: openfortAbi,
+                functionName: "executeBatch",
+                args: [
+                    calls.map((call) => {
+                        return {
+                            target: call.to,
+                            value: call.value ?? 0n,
+                            data: call.data ?? "0x"
+                        }
+                    })
+                ]
+            })
+        },
+        async decodeCalls(data: Hex) {
+            const res = decodeFunctionData({
+                abi: openfortAbi,
+                data
+            });
+            if(res.functionName === "executeBatch") {
+                return res.args[0].map((call) => {
+                    return {
+                        to: call.target,
+                        value: call.value,
+                        data: call.data
+                    }
+                });
+            }
+            throw new Error("unknown call encoded: " + data);
+        },
+        authorization: {
+            account: owner,
+            address: "0x770200013027B0B3d0151BDeb26757132C95C875"
+        },
+        async getAddress() {
+            return owner.address
+        },
+        async getFactoryArgs() {
+            return { factory: '0x7702', factoryData: '0x' }
+        },
+        async getStubSignature() {
+            return encodeAbiParameters(
+                [
+                    { name: 'x', type: 'uint8' },
+                    { name: 'x', type: 'bytes' }
+                ],
+                [
+                    0,
+                    "0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c"
+                ]
+            );
+        },
+        async signMessage(parameters) {
+            const { message } = parameters
+            return await owner.signMessage({ message })
+        },
+        async signTypedData(parameters) {
+            const { domain, types, primaryType, message } =
+                parameters as TypedDataDefinition<TypedData, string>
+            return await owner.signTypedData({
+                domain,
+                message,
+                primaryType,
+                types,
+            })
+        },
+        async signUserOperation(parameters) {
+            const { chainId = bundlerClient.chain.id, authorization, ...userOperation } = parameters
+            const typedData = getUserOperationTypedData({
+                chainId,
+                entryPointAddress: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+                userOperation: {
+                    ...userOperation,
+                    sender: owner.address,
+                },
+            })
+            const rawSignature = await owner.signTypedData(typedData)
+            const sig = encodeAbiParameters(
+                [
+                    { name: 'x', type: 'uint8' },
+                    { name: 'x', type: 'bytes' }
+                ],
+                [0, rawSignature]
+            );
+
+            console.log("sig:: ", sig)
+
+            return sig;
+        },
+    });
+
+
+    const senderCode = await bundlerClient.getCode({
+        address: owner.address
+    });
+
+    const delegateAddress = openfortAccount.authorization?.address;
+    let authorization: SignAuthorizationReturnType | undefined;
+    if(delegateAddress && senderCode !== `0xef0100${delegateAddress.toLowerCase().substring(2)}`) {
+        authorization = await bundlerClient.signAuthorization({
+            account: owner,
+            contractAddress: delegateAddress
+        })
+    }
+
+    console.log("authorization:: ", authorization);
+
+    const userOpHash = await bundlerClient.sendUserOperation({
+        account: openfortAccount,
+        authorization,
+        factory: authorization ? "0x7702" : undefined,
+        factoryData: authorization ? "0x" : undefined,
+        calls: [
+            {
+                to: "0x03b22d7742fA2A8a8f01b64F40F0F2185E965cB8",
+                value: parseUnits('0.00000001', 18)
+            }
+        ],
+    });
+
+    console.log("userop hash:: ", userOpHash);
+    return userOpHash;
+}
+main(optimism);
