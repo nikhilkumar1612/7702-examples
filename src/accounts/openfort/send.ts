@@ -15,7 +15,7 @@ import {
 import {
     entryPoint08Abi,
     toSmartAccount,
-    getUserOperationTypedData
+    toPackedUserOperation
 } from "viem/account-abstraction";
 import { privateKeyToAccount } from "viem/accounts";
 import { optimism } from "viem/chains";
@@ -38,8 +38,6 @@ const callType = {
     type: 'tuple',
 };
 
-const params = [{ ...callType, type: 'tuple[]' }];
-
 const main = async (
     chain: Chain
 ) => {
@@ -60,18 +58,21 @@ const main = async (
             version: "0.8" // using 0.8 temporarily, until viem supports 0.9
         },
         async encodeCalls (calls: readonly Call[]) {
-            console.log("calls:: ", calls);
             return encodeFunctionData({
                 abi: openfortAbi,
-                functionName: "executeBatch",
+                functionName: "execute",
                 args: [
-                    calls.map((call) => {
-                        return {
-                            target: call.to,
-                            value: call.value ?? 0n,
-                            data: call.data ?? "0x"
-                        }
-                    })
+                    "0x0100000000000000000000000000000000000000000000000000000000000000", // mode_1
+                    encodeAbiParameters(
+                        [{...callType, type: 'tuple[]'}],
+                        [calls.map((call) => {
+                            return {
+                                target: call.to,
+                                value: call.value ?? 0n,
+                                data: call.data ?? "0x"
+                            }
+                        })]
+                    )
                 ]
             })
         },
@@ -104,11 +105,11 @@ const main = async (
         async getStubSignature() {
             return encodeAbiParameters(
                 [
-                    { name: 'x', type: 'uint8' },
-                    { name: 'x', type: 'bytes' }
+                    { type: 'uint256' },
+                    { type: 'bytes' }
                 ],
                 [
-                    0,
+                    0n,
                     "0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c"
                 ]
             );
@@ -129,29 +130,41 @@ const main = async (
         },
         async signUserOperation(parameters) {
             const { chainId = bundlerClient.chain.id, authorization, ...userOperation } = parameters
-            const typedData = getUserOperationTypedData({
-                chainId,
-                entryPointAddress: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
-                userOperation: {
-                    ...userOperation,
-                    sender: owner.address,
-                },
+            const packedUserOp = toPackedUserOperation({...userOperation, sender: owner.address});
+            const userOpHash = await bundlerClient.request({
+                method: "eth_call",
+                params: [
+                    {
+                        to: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+                        data: encodeFunctionData({
+                            abi: entryPoint08Abi,
+                            functionName: "getUserOpHash",
+                            args: [packedUserOp]
+                        })
+                    },
+                    "latest",
+                    authorization ? {
+                        [owner.address]: {
+                            code: `0xef0100770200013027B0B3d0151BDeb26757132C95C875`
+                        }
+                    } : {}
+                ]
             })
-            const rawSignature = await owner.signTypedData(typedData)
+
+            const rawSignature = await owner.sign({
+                hash: userOpHash as Hex
+            })
             const sig = encodeAbiParameters(
                 [
-                    { name: 'x', type: 'uint8' },
-                    { name: 'x', type: 'bytes' }
+                    { type: 'uint256' },
+                    { type: 'bytes' }
                 ],
-                [0, rawSignature]
+                [0n, rawSignature]
             );
-
-            console.log("sig:: ", sig)
 
             return sig;
         },
     });
-
 
     const senderCode = await bundlerClient.getCode({
         address: owner.address
@@ -168,7 +181,7 @@ const main = async (
 
     console.log("authorization:: ", authorization);
 
-    const userOpHash = await bundlerClient.sendUserOperation({
+    const hash = await bundlerClient.sendUserOperation({
         account: openfortAccount,
         authorization,
         factory: authorization ? "0x7702" : undefined,
@@ -181,7 +194,7 @@ const main = async (
         ],
     });
 
-    console.log("userop hash:: ", userOpHash);
-    return userOpHash;
+    console.log("userop hash:: ", hash);
+    return hash;
 }
 main(optimism);

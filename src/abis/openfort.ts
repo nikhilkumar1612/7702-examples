@@ -760,16 +760,16 @@ export const openfortAbi = [
 		stateMutability: 'nonpayable',
 		type: 'function',
 	},
-	// {
-	// 	inputs: [
-	// 		{ internalType: 'bytes32', name: 'mode', type: 'bytes32' },
-	// 		{ internalType: 'bytes', name: 'executionData', type: 'bytes' },
-	// 	],
-	// 	name: 'execute',
-	// 	outputs: [],
-	// 	stateMutability: 'payable',
-	// 	type: 'function',
-	// },
+	{
+		inputs: [
+			{ internalType: 'bytes32', name: 'mode', type: 'bytes32' },
+			{ internalType: 'bytes', name: 'executionData', type: 'bytes' },
+		],
+		name: 'execute',
+		outputs: [],
+		stateMutability: 'payable',
+		type: 'function',
+	},
 	{
 		inputs: [
 			{

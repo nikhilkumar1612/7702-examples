@@ -12,7 +12,7 @@ import {
     Hex,
     Chain
 } from "viem";
-import { optimism, optimismSepolia, sepolia } from "viem/chains";
+import { arbitrumSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
 import dotenv from "dotenv";
 dotenv.config()
 
@@ -60,4 +60,4 @@ const main = async (chain: Chain) => {
     console.log("userOpHash:: ", userOpHash);
     return userOpHash;
 }
-main(optimismSepolia)
+main(arbitrumSepolia)
