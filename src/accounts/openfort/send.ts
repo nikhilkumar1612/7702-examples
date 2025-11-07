@@ -50,11 +50,14 @@ const main = async (
         bundlerUrl
     }).extend(publicActions).extend(walletActions);
 
+    const entrypoint09Address = "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709";
+    const implementation = "0x770200013027B0B3d0151BDeb26757132C95C875";
+
     const openfortAccount = await toSmartAccount({
         client: bundlerClient,
         entryPoint: {
             abi: entryPoint08Abi,
-            address: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+            address: entrypoint09Address,
             version: "0.8" // using 0.8 temporarily, until viem supports 0.9
         },
         async encodeCalls (calls: readonly Call[]) {
@@ -94,7 +97,15 @@ const main = async (
         },
         authorization: {
             account: owner,
-            address: "0x770200013027B0B3d0151BDeb26757132C95C875"
+            address: implementation
+        },
+        async getNonce() {
+            return bundlerClient.readContract({
+                address: entrypoint09Address,
+                abi: entryPoint08Abi,
+                functionName: "getNonce",
+                args: [owner.address, 1n]
+            })
         },
         async getAddress() {
             return owner.address
@@ -135,7 +146,7 @@ const main = async (
                 method: "eth_call",
                 params: [
                     {
-                        to: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+                        to: entrypoint09Address,
                         data: encodeFunctionData({
                             abi: entryPoint08Abi,
                             functionName: "getUserOpHash",
@@ -145,7 +156,7 @@ const main = async (
                     "latest",
                     authorization ? {
                         [owner.address]: {
-                            code: `0xef0100770200013027B0B3d0151BDeb26757132C95C875`
+                            code: `0xef0100${implementation.toLowerCase().substring(2)}`
                         }
                     } : {}
                 ]
@@ -166,6 +177,8 @@ const main = async (
         },
     });
 
+    console.log("wallet:: ", openfortAccount.address);
+
     const senderCode = await bundlerClient.getCode({
         address: owner.address
     });
@@ -178,8 +191,6 @@ const main = async (
             contractAddress: delegateAddress
         })
     }
-
-    console.log("authorization:: ", authorization);
 
     const hash = await bundlerClient.sendUserOperation({
         account: openfortAccount,
