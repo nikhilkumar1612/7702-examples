@@ -27,12 +27,12 @@ const main = async (chain: Chain) => {
                             .extend(publicActions);
 
     const smartAccount: ToSimple7702SmartAccountReturnType = await toSimple7702SmartAccount({
-        implementation: "0xBC3926fE3D052f5451af02bA04e134EdcB741977",
+        implementation: "0xa46cc63eBF4Bd77888AA327837d20b23A63a56B5",
         client: bundlerClient,
         owner,
     });
 
-    smartAccount.entryPoint.address = "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709" // overriding to ep9 address
+    smartAccount.entryPoint.address = "0x433709009B8330FDa32311DF1C2AFA402eD8D009" // overriding to ep9 address
 
     console.log("wallet:: ", smartAccount.address);
 
@@ -60,4 +60,4 @@ const main = async (chain: Chain) => {
     console.log("userOpHash:: ", userOpHash);
     return userOpHash;
 }
-main(arbitrumSepolia)
+main(sepolia)
