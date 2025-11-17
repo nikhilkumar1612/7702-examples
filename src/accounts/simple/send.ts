@@ -12,7 +12,7 @@ import {
     Hex,
     Chain
 } from "viem";
-import { arbitrumSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
+import { arbitrum, arbitrumSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
 import dotenv from "dotenv";
 dotenv.config()
 
@@ -48,6 +48,8 @@ const main = async (chain: Chain) => {
         authorization = await bundlerClient.signAuthorization(smartAccount.authorization)
     }
 
+    console.log("authorization:: ", authorization);
+
     const userOpHash = await bundlerClient.sendUserOperation({
         account: smartAccount,
         authorization,
@@ -60,4 +62,4 @@ const main = async (chain: Chain) => {
     console.log("userOpHash:: ", userOpHash);
     return userOpHash;
 }
-main(sepolia)
+main(optimismSepolia)

@@ -19,7 +19,7 @@ import {
 } from "viem/account-abstraction";
 import { privateKeyToAccount } from "viem/accounts";
 import { ambireAccountAbi } from "../../abis/ambire";
-import { sepolia } from "viem/chains";
+import { optimism, optimismSepolia, sepolia } from "viem/chains";
 import dotenv from "dotenv";
 import { getUserOp712Data } from "./utils";
 dotenv.config();
@@ -46,7 +46,7 @@ const main = async (
         client: bundlerClient,
         entryPoint: {
             abi: entryPoint08Abi,
-            address: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+            address: "0x433709009B8330FDa32311DF1C2AFA402eD8D009",
             version: "0.8" // using 0.8 temporarily, until viem supports 0.9
         },
         async encodeCalls (calls: readonly Call[]) {
@@ -76,7 +76,7 @@ const main = async (
         },
         authorization: {
             account: owner,
-            address: "0xE729Be5802E9AF82Ed2B3C1ea2A8fe3D8DD05beF"
+            address: "0xdad2450778926b987aa5a64ef3c2d33283b58bda"
         },
         async getAddress() {
             return owner.address
@@ -110,7 +110,7 @@ const main = async (
                     authorization,
                     sender: owner.address
                 },
-                entryPointAddress: "0x43370900c8de573dB349BEd8DD53b4Ebd3Cce709",
+                entryPointAddress: "0x433709009B8330FDa32311DF1C2AFA402eD8D009",
                 entryPointVersion: "0.8",
                 chainId: chain.id
             });
@@ -141,6 +141,7 @@ const main = async (
         },
     });
 
+    console.log("wallet:: ", ambireAccount.address);
 
     const senderCode = await bundlerClient.getCode({
         address: owner.address
@@ -176,4 +177,4 @@ const main = async (
     console.log("userop hash:: ", userOpHash);
     return userOpHash;
 }
-main(sepolia);
+main(optimismSepolia);
